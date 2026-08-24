@@ -26,3 +26,21 @@ target/
 # OS
 .DS_Store
 Thumbs.db
+
+# Linux kernel build artifacts
+kernel/System.map
+kernel/Module.symvers
+kernel/vmlinux
+kernel/vmlinuz
+kernel/bzImage
+kernel/.config
+kernel/.config.old
+kernel/modules.builtin
+kernel/modules.builtin.modinfo
+kernel/modules.order
+kernel/arch/*/boot/
+kernel/include/generated/
+kernel/include/config/
+kernel/.cache/
+kernel/*.o
+kernel/*.ko
