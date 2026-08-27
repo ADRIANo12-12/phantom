@@ -57,3 +57,16 @@ u32 phantom_osd_desktop_height(void)
 {
 	return desktop ? desktop->height : 0;
 }
+
+int phantom_osd_desktop_resize(u32 width, u32 height)
+{
+	if (!desktop)
+		return -ENODEV;
+	if (width < 40 || height < 12)
+		return -EINVAL;
+	if (width > 200 || height > 60)
+		return -EINVAL;
+	desktop->width = width;
+	desktop->height = height;
+	return 0;
+}

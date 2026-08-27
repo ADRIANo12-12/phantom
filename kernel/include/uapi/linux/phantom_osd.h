@@ -46,6 +46,8 @@ struct phantom_osd_uapi_progress {
 
 	__u32 percent;
 	__u64 eta_seconds;
+
+	__u32 widget_id;
 };
 
 struct phantom_osd_uapi_menu {
@@ -58,6 +60,7 @@ struct phantom_osd_uapi_menu {
 	__u32 height;
 
 	__u32 count;
+	__u32 widget_id;
 
 	char items[16][64];
 };
@@ -70,8 +73,24 @@ struct phantom_osd_uapi_button {
 
 	__u32 width;
 
+	__u32 widget_id;
+
 	char text[64];
 };
+
+struct phantom_osd_uapi_widget_selection {
+	__u32 window_id;
+	__u32 widget_id;
+	__u32 selected;
+};
+
+struct phantom_osd_uapi_desktop {
+	__u32 width;
+	__u32 height;
+};
+
+#define PHANTOM_OSD_IOC_SET_DESKTOP \
+	_IOW(PHANTOM_OSD_IOCTL_MAGIC, 11, struct phantom_osd_uapi_desktop)
 
 #define PHANTOM_OSD_IOC_CREATE_WINDOW \
 	_IOWR(PHANTOM_OSD_IOCTL_MAGIC, 1, \
@@ -82,16 +101,16 @@ struct phantom_osd_uapi_button {
 	     struct phantom_osd_uapi_text)
 
 #define PHANTOM_OSD_IOC_BUTTON \
-	_IOW(PHANTOM_OSD_IOCTL_MAGIC, 3, \
-	     struct phantom_osd_uapi_button)
+	_IOWR(PHANTOM_OSD_IOCTL_MAGIC, 3, \
+	      struct phantom_osd_uapi_button)
 
 #define PHANTOM_OSD_IOC_MENU \
-	_IOW(PHANTOM_OSD_IOCTL_MAGIC, 4, \
-	     struct phantom_osd_uapi_menu)
+	_IOWR(PHANTOM_OSD_IOCTL_MAGIC, 4, \
+	      struct phantom_osd_uapi_menu)
 
 #define PHANTOM_OSD_IOC_PROGRESS \
-	_IOW(PHANTOM_OSD_IOCTL_MAGIC, 5, \
-	     struct phantom_osd_uapi_progress)
+	_IOWR(PHANTOM_OSD_IOCTL_MAGIC, 5, \
+	      struct phantom_osd_uapi_progress)
 
 #define PHANTOM_OSD_IOC_RENDER \
 	_IO(PHANTOM_OSD_IOCTL_MAGIC, 6)
@@ -102,5 +121,13 @@ struct phantom_osd_uapi_button {
 #define PHANTOM_OSD_IOC_STATUS \
 	_IOW(PHANTOM_OSD_IOCTL_MAGIC, 8, \
 	     struct phantom_osd_uapi_text)
+
+#define PHANTOM_OSD_IOC_MENU_SET_SELECTED \
+	_IOW(PHANTOM_OSD_IOCTL_MAGIC, 9, \
+	     struct phantom_osd_uapi_widget_selection)
+
+#define PHANTOM_OSD_IOC_BUTTON_SET_SELECTED \
+	_IOW(PHANTOM_OSD_IOCTL_MAGIC, 10, \
+	     struct phantom_osd_uapi_widget_selection)
 
 #endif

@@ -1,7 +1,6 @@
 # Phantom OSD
 
 obj-y += phantomsysinfo.o
-obj-y += phantom_panic_usrspc.o
 obj-y += phantom_syscalls.o
 
 obj-y += osd.o

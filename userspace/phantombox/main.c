@@ -1,90 +1,106 @@
+// SPDX-License-Identifier: GPL-2.0
+
 #include "../libphantom/phantom.h"
-#include <fcntl.h>
+
 #include <string.h>
 #include <sys/reboot.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-int main(int argc, char **argv) {
-  static const char hellomess[] =
-      "Phantom OS shell. Write help for more information.\n"
-      "\tAdrian Sikora 2026 Copyright\n"
-      "\t\t\tPhantom OS\n\n";
+int main(void)
+{
+	static const char hellomess[] =
+		"Phantom OS shell. Write help for more information.\n"
+		"\tAdrian Sikora 2026 Copyright\n"
+		"\t\t\tPhantom OS\n\n";
 
-  static const char input[] = "~/PhantomOS-$ ";
+	static const char prompt[] =
+		"~/PhantomOS-$ ";
 
-  static const char help[] = "\nhelp - shows this command\n"
-                             "exit - shuts down system\n"
-                             "install - opens install Phantom OS\n"
-                             "panic - panics the system\n"
-                             "reboot - restarts the system\n"
-                             "poweroff - shuts down the system\n";
+	static const char help[] =
+		"\n"
+		"help - shows this command\n"
+		"exit - exits the shell\n"
+		"install - opens Phantom OS installer\n"
+		"panic - panics the kernel\n"
+		"reboot - restarts the system\n"
+		"poweroff - shuts down the system\n";
 
-  int fd;
-  ssize_t n;
-  char buf[4096];
+	char buf[256];
+	ssize_t n;
 
-  if (argc > 2)
-    return 1;
+	write(STDOUT_FILENO,
+	      hellomess,
+	      sizeof(hellomess) - 1);
 
-  write(1, hellomess, sizeof(hellomess) - 1);
+	for (;;) {
+		write(STDOUT_FILENO,
+		      prompt,
+		      sizeof(prompt) - 1);
 
-  for (;;) {
-    write(1, input, sizeof(input) - 1);
+		n = read(STDIN_FILENO,
+			 buf,
+			 sizeof(buf) - 1);
 
-    n = read(0, buf, sizeof(buf));
+		if (n <= 0)
+			break;
 
-    if (n <= 0)
-      break;
+		if (buf[n - 1] == '\n')
+			n--;
 
-    if (buf[n - 1] == '\n')
-      buf[n - 1] = '\0';
+		if (n > 0 && buf[n - 1] == '\r')
+			n--;
 
-    if (strcmp(buf, "panic") == 0) {
-        phantom_panic();
-    }
+		buf[n] = '\0';
 
-    if (strcmp(buf, "install") == 0) {
-        pid_t pid = fork();
+		if (strcmp(buf, "help") == 0) {
+			write(STDOUT_FILENO,
+			      help,
+			      sizeof(help) - 1);
+			continue;
+		}
 
-        if (pid == 0) {
-            execl("/bin/phatominstall",
-                  "phatominstall",
-                  (char *)NULL);
+		if (strcmp(buf, "panic") == 0) {
+			/*
+			 * 473 is the Phantom panic syscall.
+			 * The syscall does not return after panic().
+			 */
+			phantom_panic();
+			continue;
+		}
 
-            _exit(127);
-        }
+		if (strcmp(buf, "poweroff") == 0) {
+			reboot(RB_POWER_OFF);
+			continue;
+		}
 
-        if (pid > 0)
-            waitpid(pid, NULL, 0);
-    }
+		if (strcmp(buf, "reboot") == 0) {
+			reboot(RB_AUTOBOOT);
+			continue;
+		}
 
-    if (strcmp(buf, "poweroff") == 0) {
-      reboot(RB_POWER_OFF);
-    }
+		if (strcmp(buf, "install") == 0) {
+			pid_t pid;
 
-    if (strcmp(buf, "reboot") == 0) {
-      reboot(RB_AUTOBOOT);
-    }
+			pid = fork();
 
-    if (strcmp(buf, "panic") == 0) {
-      int fd;
+			if (pid == 0) {
+				execl("/bin/phatominstall",
+				      "phatominstall",
+				      (char *)NULL);
 
-      fd = open("/proc/phantom_panic", O_WRONLY);
+				_exit(127);
+			}
 
-      if (fd < 0) {
-        write(1, "PhantomBox: cannot open /proc/phantom_panic\n", 45);
-      } else {
-        write(fd, "1", 1);
-        close(fd);
-      }
-    }
+			if (pid > 0)
+				waitpid(pid, NULL, 0);
 
-    if (strcmp(buf, "help") == 0) {
-      write(1, help, sizeof(help) - 1);
-    }
-  }
+			continue;
+		}
 
-  return 0;
+		if (strcmp(buf, "exit") == 0)
+			break;
+	}
+
+	return 0;
 }

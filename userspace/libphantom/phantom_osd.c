@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-
 #include <sys/ioctl.h>
 
 #include "phantom_osd.h"
@@ -29,8 +28,24 @@ void phantom_osd_close(void)
 {
 	if (phantom_osd_fd >= 0)
 		close(phantom_osd_fd);
-
 	phantom_osd_fd = -1;
+}
+
+int phantom_osd_set_desktop(uint32_t width, uint32_t height)
+{
+	struct phantom_osd_uapi_desktop request;
+
+	if (phantom_osd_fd < 0)
+		return -ENODEV;
+
+	memset(&request, 0, sizeof(request));
+	request.width = width;
+	request.height = height;
+
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_SET_DESKTOP, &request) < 0)
+		return -errno;
+
+	return 0;
 }
 
 int phantom_osd_create_window(
@@ -47,7 +62,6 @@ int phantom_osd_create_window(
 		return -ENODEV;
 
 	memset(&request, 0, sizeof(request));
-
 	request.x = x;
 	request.y = y;
 	request.width = width;
@@ -76,7 +90,6 @@ int phantom_osd_label(
 		return -ENODEV;
 
 	memset(&request, 0, sizeof(request));
-
 	request.window_id = window_id;
 	request.x = x;
 	request.y = y;
@@ -96,7 +109,8 @@ int phantom_osd_button(
 	int32_t x,
 	int32_t y,
 	uint32_t width,
-	const char *text)
+	const char *text,
+	uint32_t *widget_id)
 {
 	struct phantom_osd_uapi_button request;
 
@@ -104,7 +118,6 @@ int phantom_osd_button(
 		return -ENODEV;
 
 	memset(&request, 0, sizeof(request));
-
 	request.window_id = window_id;
 	request.x = x;
 	request.y = y;
@@ -116,6 +129,9 @@ int phantom_osd_button(
 	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_BUTTON, &request) < 0)
 		return -errno;
 
+	if (widget_id)
+		*widget_id = request.widget_id;
+
 	return 0;
 }
 
@@ -126,7 +142,8 @@ int phantom_osd_menu(
 	uint32_t width,
 	uint32_t height,
 	const char *const *items,
-	uint32_t count)
+	uint32_t count,
+	uint32_t *widget_id)
 {
 	struct phantom_osd_uapi_menu request;
 	uint32_t i;
@@ -141,7 +158,6 @@ int phantom_osd_menu(
 		return -EINVAL;
 
 	memset(&request, 0, sizeof(request));
-
 	request.window_id = window_id;
 	request.x = x;
 	request.y = y;
@@ -157,6 +173,9 @@ int phantom_osd_menu(
 	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_MENU, &request) < 0)
 		return -errno;
 
+	if (widget_id)
+		*widget_id = request.widget_id;
+
 	return 0;
 }
 
@@ -166,7 +185,8 @@ int phantom_osd_progress(
 	int32_t y,
 	uint32_t width,
 	uint32_t percent,
-	uint64_t eta_seconds)
+	uint64_t eta_seconds,
+	uint32_t *widget_id)
 {
 	struct phantom_osd_uapi_progress request;
 
@@ -177,7 +197,6 @@ int phantom_osd_progress(
 		return -EINVAL;
 
 	memset(&request, 0, sizeof(request));
-
 	request.window_id = window_id;
 	request.x = x;
 	request.y = y;
@@ -187,6 +206,9 @@ int phantom_osd_progress(
 
 	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_PROGRESS, &request) < 0)
 		return -errno;
+
+	if (widget_id)
+		*widget_id = request.widget_id;
 
 	return 0;
 }
@@ -204,7 +226,6 @@ int phantom_osd_status(
 		return -ENODEV;
 
 	memset(&request, 0, sizeof(request));
-
 	request.window_id = window_id;
 	request.x = x;
 	request.y = y;
@@ -214,6 +235,48 @@ int phantom_osd_status(
 		strncpy(request.text, text, sizeof(request.text) - 1);
 
 	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_STATUS, &request) < 0)
+		return -errno;
+
+	return 0;
+}
+
+int phantom_osd_menu_set_selected(
+	uint32_t window_id,
+	uint32_t widget_id,
+	uint32_t selected)
+{
+	struct phantom_osd_uapi_widget_selection request;
+
+	if (phantom_osd_fd < 0)
+		return -ENODEV;
+
+	memset(&request, 0, sizeof(request));
+	request.window_id = window_id;
+	request.widget_id = widget_id;
+	request.selected = selected;
+
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_MENU_SET_SELECTED, &request) < 0)
+		return -errno;
+
+	return 0;
+}
+
+int phantom_osd_button_set_selected(
+	uint32_t window_id,
+	uint32_t widget_id,
+	uint32_t selected)
+{
+	struct phantom_osd_uapi_widget_selection request;
+
+	if (phantom_osd_fd < 0)
+		return -ENODEV;
+
+	memset(&request, 0, sizeof(request));
+	request.window_id = window_id;
+	request.widget_id = widget_id;
+	request.selected = selected;
+
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_BUTTON_SET_SELECTED, &request) < 0)
 		return -errno;
 
 	return 0;

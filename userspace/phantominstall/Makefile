@@ -1,24 +1,35 @@
 CC = gcc
 
-CFLAGS = -Wall -Wextra -O2 -static
+CFLAGS = -Wall -Wextra -O2 -static -I. -I../libphantom
 
 TARGET = phatominstall
 
 LIBDIR = ../libphantom
 LIB = $(LIBDIR)/libphantom.a
 
+SOURCES = \
+	main.c \
+	installer.c \
+	system.c \
+	network.c \
+	storage.c \
+	package.c
+
+OBJECTS = $(SOURCES:.c=.o)
+
 all: $(TARGET)
 
 $(LIB):
 	$(MAKE) -C $(LIBDIR)
 
-$(TARGET): main.o $(LIB)
-	$(CC) $(CFLAGS) main.o $(LIB) -o $(TARGET)
+$(TARGET): $(OBJECTS) $(LIB)
+	$(CC) $(CFLAGS) $(OBJECTS) $(LIB) -o $(TARGET)
 
-main.o: main.c
-	$(CC) $(CFLAGS) -I$(LIBDIR) -c main.c -o main.o
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f main.o $(TARGET)
+	rm -f $(OBJECTS) $(TARGET)
+	$(MAKE) -C $(LIBDIR) clean
 
 .PHONY: all clean

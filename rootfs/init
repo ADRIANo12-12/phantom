@@ -1,8 +1,17 @@
 #!/bin/sh
 
+echo "[PHANTOM] mounting proc..."
 /bin/busybox mount -t proc proc /proc
+
+echo "[PHANTOM] mounting sysfs..."
 /bin/busybox mount -t sysfs sysfs /sys
-/bin/busybox mount -t devtmpfs devtmpfs /dev
+
+echo "[PHANTOM] mounting devtmpfs..."
+if /bin/busybox mount -t devtmpfs devtmpfs /dev; then
+	echo "[PHANTOM] devtmpfs: OK"
+else
+	echo "[PHANTOM] devtmpfs: FAILED"
+fi
 
 echo
 echo "        Phantom OS"
@@ -10,35 +19,41 @@ echo
 echo "Kernel booted successfully."
 echo
 
+if [ -e /dev/phantom_osd ]; then
+	echo "Phantom OSD device: /dev/phantom_osd"
+else
+	echo "WARNING: /dev/phantom_osd is missing"
+fi
+
 IFACE=""
 
 for i in /sys/class/net/*; do
-    name="${i##*/}"
+	name="${i##*/}"
 
-    if [ "$name" != "lo" ]; then
-        IFACE="$name"
-        break
-    fi
+	if [ "$name" != "lo" ]; then
+		IFACE="$name"
+		break
+	fi
 done
 
 if [ -n "$IFACE" ]; then
-    echo "Network interface: $IFACE"
+	echo "Network interface: $IFACE"
 
-    /bin/busybox ip link set "$IFACE" up 2>/dev/null || true
+	/bin/busybox ip link set "$IFACE" up 2>/dev/null || true
 
-    if /bin/busybox udhcpc \
-        -q \
-        -n \
-        -t 5 \
-        -T 3 \
-        -i "$IFACE" 2>/dev/null; then
-
-        echo "Network: DHCP OK"
-    else
-        echo "Network: DHCP FAILED"
-    fi
+	if /bin/busybox udhcpc \
+		-q \
+		-n \
+		-t 5 \
+		-T 3 \
+		-i "$IFACE" 2>/dev/null
+	then
+		echo "Network: DHCP OK"
+	else
+		echo "Network: DHCP FAILED"
+	fi
 else
-    echo "Network: no interface found"
+	echo "Network: no interface found"
 fi
 
 exec /bin/phantombox
