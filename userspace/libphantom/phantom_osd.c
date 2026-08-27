@@ -18,10 +18,7 @@ int phantom_osd_open(void)
 	if (phantom_osd_fd >= 0)
 		return 0;
 
-	phantom_osd_fd = open(
-		"/dev/phantom_osd",
-		O_RDWR);
-
+	phantom_osd_fd = open("/dev/phantom_osd", O_RDWR);
 	if (phantom_osd_fd < 0)
 		return -errno;
 
@@ -58,15 +55,9 @@ int phantom_osd_create_window(
 	request.flags = flags;
 
 	if (title)
-		strncpy(
-			request.title,
-			title,
-			sizeof(request.title) - 1);
+		strncpy(request.title, title, sizeof(request.title) - 1);
 
-	if (ioctl(
-		    phantom_osd_fd,
-		    PHANTOM_OSD_IOC_CREATE_WINDOW,
-		    &request) < 0)
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_CREATE_WINDOW, &request) < 0)
 		return -errno;
 
 	return (int)request.window_id;
@@ -92,15 +83,9 @@ int phantom_osd_label(
 	request.width = width;
 
 	if (text)
-		strncpy(
-			request.text,
-			text,
-			sizeof(request.text) - 1);
+		strncpy(request.text, text, sizeof(request.text) - 1);
 
-	if (ioctl(
-		    phantom_osd_fd,
-		    PHANTOM_OSD_IOC_LABEL,
-		    &request) < 0)
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_LABEL, &request) < 0)
 		return -errno;
 
 	return 0;
@@ -126,15 +111,9 @@ int phantom_osd_button(
 	request.width = width;
 
 	if (text)
-		strncpy(
-			request.text,
-			text,
-			sizeof(request.text) - 1);
+		strncpy(request.text, text, sizeof(request.text) - 1);
 
-	if (ioctl(
-		    phantom_osd_fd,
-		    PHANTOM_OSD_IOC_BUTTON,
-		    &request) < 0)
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_BUTTON, &request) < 0)
 		return -errno;
 
 	return 0;
@@ -147,8 +126,7 @@ int phantom_osd_menu(
 	uint32_t width,
 	uint32_t height,
 	const char *const *items,
-	uint32_t count,
-	uint32_t *widget_id)
+	uint32_t count)
 {
 	struct phantom_osd_uapi_menu request;
 	uint32_t i;
@@ -172,19 +150,12 @@ int phantom_osd_menu(
 	request.count = count;
 
 	for (i = 0; i < count; i++)
-		strncpy(
-			request.items[i],
+		strncpy(request.items[i],
 			items[i] ? items[i] : "",
 			sizeof(request.items[i]) - 1);
 
-	if (ioctl(
-		    phantom_osd_fd,
-		    PHANTOM_OSD_IOC_MENU,
-		    &request) < 0)
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_MENU, &request) < 0)
 		return -errno;
-
-	if (widget_id)
-		*widget_id = request.widget_id;
 
 	return 0;
 }
@@ -214,10 +185,7 @@ int phantom_osd_progress(
 	request.percent = percent;
 	request.eta_seconds = eta_seconds;
 
-	if (ioctl(
-		    phantom_osd_fd,
-		    PHANTOM_OSD_IOC_PROGRESS,
-		    &request) < 0)
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_PROGRESS, &request) < 0)
 		return -errno;
 
 	return 0;
@@ -243,65 +211,9 @@ int phantom_osd_status(
 	request.width = width;
 
 	if (text)
-		strncpy(
-			request.text,
-			text,
-			sizeof(request.text) - 1);
+		strncpy(request.text, text, sizeof(request.text) - 1);
 
-	if (ioctl(
-		    phantom_osd_fd,
-		    PHANTOM_OSD_IOC_STATUS,
-		    &request) < 0)
-		return -errno;
-
-	return 0;
-}
-
-int phantom_osd_menu_set_selected(
-	uint32_t window_id,
-	uint32_t widget_id,
-	uint32_t selected)
-{
-	struct phantom_osd_uapi_widget_selection request;
-
-	if (phantom_osd_fd < 0)
-		return -ENODEV;
-
-	memset(&request, 0, sizeof(request));
-
-	request.window_id = window_id;
-	request.widget_id = widget_id;
-	request.selected = selected;
-
-	if (ioctl(
-		    phantom_osd_fd,
-		    PHANTOM_OSD_IOC_MENU_SET_SELECTED,
-		    &request) < 0)
-		return -errno;
-
-	return 0;
-}
-
-int phantom_osd_button_set_selected(
-	uint32_t window_id,
-	uint32_t widget_id,
-	uint32_t selected)
-{
-	struct phantom_osd_uapi_widget_selection request;
-
-	if (phantom_osd_fd < 0)
-		return -ENODEV;
-
-	memset(&request, 0, sizeof(request));
-
-	request.window_id = window_id;
-	request.widget_id = widget_id;
-	request.selected = selected;
-
-	if (ioctl(
-		    phantom_osd_fd,
-		    PHANTOM_OSD_IOC_BUTTON_SET_SELECTED,
-		    &request) < 0)
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_STATUS, &request) < 0)
 		return -errno;
 
 	return 0;
@@ -312,10 +224,7 @@ int phantom_osd_focus(uint32_t window_id)
 	if (phantom_osd_fd < 0)
 		return -ENODEV;
 
-	if (ioctl(
-		    phantom_osd_fd,
-		    PHANTOM_OSD_IOC_FOCUS,
-		    &window_id) < 0)
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_FOCUS, &window_id) < 0)
 		return -errno;
 
 	return 0;
@@ -326,9 +235,7 @@ int phantom_osd_render(void)
 	if (phantom_osd_fd < 0)
 		return -ENODEV;
 
-	if (ioctl(
-		    phantom_osd_fd,
-		    PHANTOM_OSD_IOC_RENDER) < 0)
+	if (ioctl(phantom_osd_fd, PHANTOM_OSD_IOC_RENDER) < 0)
 		return -errno;
 
 	return 0;

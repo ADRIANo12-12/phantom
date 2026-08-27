@@ -41,8 +41,7 @@ int phantom_osd_menu(
 	uint32_t width,
 	uint32_t height,
 	const char *const *items,
-	uint32_t count,
-	uint32_t *widget_id);
+	uint32_t count);
 
 int phantom_osd_progress(
 	uint32_t window_id,
@@ -58,16 +57,6 @@ int phantom_osd_status(
 	int32_t y,
 	uint32_t width,
 	const char *text);
-
-int phantom_osd_menu_set_selected(
-	uint32_t window_id,
-	uint32_t widget_id,
-	uint32_t selected);
-
-int phantom_osd_button_set_selected(
-	uint32_t window_id,
-	uint32_t widget_id,
-	uint32_t selected);
 
 int phantom_osd_focus(uint32_t window_id);
 
