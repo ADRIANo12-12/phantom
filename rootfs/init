@@ -1,0 +1,44 @@
+#!/bin/sh
+
+/bin/busybox mount -t proc proc /proc
+/bin/busybox mount -t sysfs sysfs /sys
+/bin/busybox mount -t devtmpfs devtmpfs /dev
+
+echo
+echo "        Phantom OS"
+echo
+echo "Kernel booted successfully."
+echo
+
+IFACE=""
+
+for i in /sys/class/net/*; do
+    name="${i##*/}"
+
+    if [ "$name" != "lo" ]; then
+        IFACE="$name"
+        break
+    fi
+done
+
+if [ -n "$IFACE" ]; then
+    echo "Network interface: $IFACE"
+
+    /bin/busybox ip link set "$IFACE" up 2>/dev/null || true
+
+    if /bin/busybox udhcpc \
+        -q \
+        -n \
+        -t 5 \
+        -T 3 \
+        -i "$IFACE" 2>/dev/null; then
+
+        echo "Network: DHCP OK"
+    else
+        echo "Network: DHCP FAILED"
+    fi
+else
+    echo "Network: no interface found"
+fi
+
+exec /bin/phantombox
