@@ -31,7 +31,7 @@ INITRAMFS="$OUT_DIR/phantom-initramfs.cpio.gz"
 VERSION="$(phantom_version_read)"
 KVER="$(phantom_kernel_short)"
 
-ISO_PATH="${1:-$OUT_DIR/../phantom-${VERSION}-k${KVER}.iso}"
+ISO_PATH="${1:-$OUT_DIR/phantom-${VERSION}-k${KVER}.iso}"
 ISO_PATH="$(realpath -m "$ISO_PATH")"
 
 ISO_MOUNT_PT="boot/grub"  # grub2-mkrescue szuka tu grub.cfg
