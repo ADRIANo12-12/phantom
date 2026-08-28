@@ -150,7 +150,11 @@ fi
 
 info "Switching to $RELEASE_BRANCH ..."
 
-git switch "$RELEASE_BRANCH"
+if git show-ref --verify --quiet "refs/heads/$RELEASE_BRANCH"; then
+	git switch "$RELEASE_BRANCH"
+else
+	git switch -c "$RELEASE_BRANCH" "origin/$RELEASE_BRANCH"
+fi
 git merge --ff-only master || {
 	warn "Nie udał się ff-merge marki. Wróć na master."
 	git switch "$DEV_BRANCH"
