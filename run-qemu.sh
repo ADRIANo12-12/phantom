@@ -40,6 +40,7 @@ info "Phantom OS — QEMU (-nographic)"
 echo "  Kernel   : $BZIMAGE"
 echo "  Initramfs: $INITRAMFS"
 echo "  Init     : /init"
+echo "  Terminal : 80x24 zalecany rozmiar"
 echo
 
 exec qemu-system-x86_64 \
@@ -49,5 +50,5 @@ exec qemu-system-x86_64 \
 	-kernel "$BZIMAGE" \
 	-nic user,model=e1000 \
 	-initrd "$INITRAMFS" \
-	-append "console=ttyS0 earlycon=ttyS0 rdinit=/init" \
+	-append "console=tty0 earlycon=ttyS0 console=ttyS0 rdinit=/init" \
 	-nographic

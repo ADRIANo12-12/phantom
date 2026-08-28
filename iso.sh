@@ -50,7 +50,7 @@ set terminal=console
 set gfxmode=text
 
 menuentry "Phantom OS" {
-	linux  /boot/bzImage console=ttyS0 earlycon=ttyS0 rdinit=/init
+	linux  /boot/bzImage console=tty0 earlycon=ttyS0 console=ttyS0 rdinit=/init
 	initrd /boot/phantom-initramfs.cpio.gz
 }
 GRUB

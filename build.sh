@@ -12,7 +12,7 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/scripts/common.sh"
 
-phantom_require_cmds make cpio gzip
+phantom_require_cmds make cpio gzip curl tar git bzip2
 phantom_require_branch "$DEV_BRANCH"
 
 JOBS="${JOBS:-$(nproc)}"
@@ -45,14 +45,13 @@ ok "Kernel built."
 
 info "Building userspace..."
 
-make -C "$USERSPACE_DIR/libphantom"
-make -C "$USERSPACE_DIR/phantombox"
-make -C "$USERSPACE_DIR/phantominstall"
+# Build external TUI tools
+"$USERSPACE_DIR/build.sh" "$USERSPACE_DIR/out"
 
-[[ -x "$USERSPACE_DIR/phantombox/phantombox" ]] || \
-	die "phantombox nie został zbudowany."
-[[ -x "$USERSPACE_DIR/phantominstall/phatominstall" ]] || \
-	die "phatominstall nie został zbudowany."
+# Verify critical binaries
+for bin in gum superfile nvim btop lazygit phantom-desktop; do
+    [[ -x "$USERSPACE_DIR/out/bin/$bin" ]] || die "$bin nie został zbudowany."
+done
 
 ok "Userspace built."
 
@@ -67,20 +66,36 @@ info "Preparing initramfs..."
 STAGE="$BUILDS_DIR/rootfs-stage"
 rm -rf "$STAGE"
 cp -a "$ROOTFS_DIR/." "$STAGE/"
-mkdir -p "$STAGE/bin"
-cp "$USERSPACE_DIR/phantombox/phantombox"     "$STAGE/bin/phantombox"
-cp "$USERSPACE_DIR/phantominstall/phatominstall" "$STAGE/bin/phatominstall"
-chmod 0755 "$STAGE/bin/phantombox" "$STAGE/bin/phatominstall"
+mkdir -p "$STAGE/bin" "$STAGE/usr/share" "$STAGE/etc/phantom"
+
+# Copy userspace binaries
+cp "$USERSPACE_DIR/out/bin/"* "$STAGE/bin/"
+chmod 0755 "$STAGE/bin/"*
+
+# Add busybox symlinks for common commands
+for cmd in mkdir cp ln rm ls cat echo sleep loadkeys clear; do
+    ln -sf busybox "$STAGE/bin/$cmd"
+done
+
+# Copy themes and configs
+cp -r "$USERSPACE_DIR/out/share/"* "$STAGE/usr/share/"
+
+# Copy nvim runtime
+mkdir -p "$STAGE/usr/share/nvim"
+cp -r "$USERSPACE_DIR/out/share/nvim/"* "$STAGE/usr/share/nvim/" 2>/dev/null || true
+
+# Create symlink for phantom-desktop as default shell
+ln -sf phantom-desktop "$STAGE/bin/init-desktop"
 
 (
-	cd "$STAGE"
-	find . -print0 | cpio --null -ov --format=newc | gzip -9
+    cd "$STAGE"
+    find . -print0 | cpio --null -ov --format=newc | gzip -9
 ) > "$OUT_DIR/phantom-initramfs.cpio.gz"
 
 rm -rf "$STAGE"
 
 [[ -s "$OUT_DIR/phantom-initramfs.cpio.gz" ]] || \
-	die "initramfs nie został wygenerowany."
+    die "initramfs nie został wygenerowany."
 
 # ------------------------------------------------------------
 # 4. Publikacja artefaktów

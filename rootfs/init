@@ -13,18 +13,6 @@ else
 	echo "[PHANTOM] devtmpfs: FAILED"
 fi
 
-echo
-echo "        Phantom OS"
-echo
-echo "Kernel booted successfully."
-echo
-
-if [ -e /dev/phantom_osd ]; then
-	echo "Phantom OSD device: /dev/phantom_osd"
-else
-	echo "WARNING: /dev/phantom_osd is missing"
-fi
-
 IFACE=""
 
 for i in /sys/class/net/*; do
@@ -37,8 +25,6 @@ for i in /sys/class/net/*; do
 done
 
 if [ -n "$IFACE" ]; then
-	echo "Network interface: $IFACE"
-
 	/bin/busybox ip link set "$IFACE" up 2>/dev/null || true
 
 	if /bin/busybox udhcpc \
@@ -48,12 +34,25 @@ if [ -n "$IFACE" ]; then
 		-T 3 \
 		-i "$IFACE" 2>/dev/null
 	then
-		echo "Network: DHCP OK"
+		echo "[PHANTOM] network: DHCP OK ($IFACE)"
 	else
-		echo "Network: DHCP FAILED"
+		echo "[PHANTOM] network: DHCP FAILED ($IFACE)"
 	fi
 else
-	echo "Network: no interface found"
+	echo "[PHANTOM] network: no interface found"
 fi
 
-exec /bin/phantombox
+# Set up environment for Tokyo Night desktop
+export TERM=xterm-256color
+export COLORTERM=truecolor
+export HOME=/root
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+# Apply theme configs
+if [ -x /bin/phantom-desktop ]; then
+    /bin/phantom-desktop --apply-theme 2>/dev/null || true
+fi
+
+echo "[PHANTOM] Starting Tokyo Night Desktop..."
+
+exec /bin/phantom-desktop
