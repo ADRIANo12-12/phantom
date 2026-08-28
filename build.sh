@@ -57,22 +57,27 @@ make -C "$USERSPACE_DIR/phantominstall"
 ok "Userspace built."
 
 # ------------------------------------------------------------
-# 3. Initramfs (rootfs + świeże binarki)
+# 3. Initramfs (rootfs + świeże binarki, przez staging w builds/)
 # ------------------------------------------------------------
 
 [[ -d "$ROOTFS_DIR" ]] || die "Brak katalogu rootfs: $ROOTFS_DIR"
 
 info "Preparing initramfs..."
 
-mkdir -p "$ROOTFS_DIR/bin"
-cp "$USERSPACE_DIR/phantombox/phantombox"     "$ROOTFS_DIR/bin/phantombox"
-cp "$USERSPACE_DIR/phantominstall/phatominstall" "$ROOTFS_DIR/bin/phatominstall"
-chmod 0755 "$ROOTFS_DIR/bin/phantombox" "$ROOTFS_DIR/bin/phatominstall"
+STAGE="$BUILDS_DIR/rootfs-stage"
+rm -rf "$STAGE"
+cp -a "$ROOTFS_DIR/." "$STAGE/"
+mkdir -p "$STAGE/bin"
+cp "$USERSPACE_DIR/phantombox/phantombox"     "$STAGE/bin/phantombox"
+cp "$USERSPACE_DIR/phantominstall/phatominstall" "$STAGE/bin/phatominstall"
+chmod 0755 "$STAGE/bin/phantombox" "$STAGE/bin/phatominstall"
 
 (
-	cd "$ROOTFS_DIR"
+	cd "$STAGE"
 	find . -print0 | cpio --null -ov --format=newc | gzip -9
 ) > "$OUT_DIR/phantom-initramfs.cpio.gz"
+
+rm -rf "$STAGE"
 
 [[ -s "$OUT_DIR/phantom-initramfs.cpio.gz" ]] || \
 	die "initramfs nie został wygenerowany."
