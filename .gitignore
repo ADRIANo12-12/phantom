@@ -1,5 +1,6 @@
 # Build output
 build/
+builds/
 out/
 dist/
 *.o

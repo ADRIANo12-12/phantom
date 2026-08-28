@@ -19,7 +19,4 @@
 *.zst filter=lfs diff=lfs merge=lfs -text
 kernel/vmlinux.unstripped filter=lfs diff=lfs merge=lfs -text
 kernel/vmlinux filter=lfs diff=lfs merge=lfs -text
-kernel/.tmp_vmlinux1 filter=lfs diff=lfs merge=lfs -text
-kernel/.git/objects/pack/pack-8e0069da2d18d44de08d901574e0925097c2b05e.pack filter=lfs diff=lfs merge=lfs -text
-kernel/.tmp_vmlinux2 filter=lfs diff=lfs merge=lfs -text
 kernel/vmlinux.o filter=lfs diff=lfs merge=lfs -text

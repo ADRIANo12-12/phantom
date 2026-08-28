@@ -1,36 +1,53 @@
 #!/usr/bin/env bash
+#
+# Phantom OS — uruchomienie systemu w QEMU.
+#
+# QEMU jest ZAWSZE odpalany w trybie -nographic (serial console ttyS0).
+#
+# Użycie:
+#   ./run-qemu.sh           # używa builds/latest
+#   PHANTOM_OUT=path ./run-qemu.sh
+#
+# Opcjonalne: PHANTOM_QEMU_KVM=1 dla -enable-kvm.
 
-set -e
+set -euo pipefail
 
-ROOT="$HOME/phantom"
-KERNEL="$ROOT/kernel"
-IMAGE="$KERNEL/arch/x86/boot/bzImage"
-INITRAMFS="$KERNEL/usr/phantom-initramfs.cpio.gz"
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/common.sh"
 
-if [ ! -f "$IMAGE" ]; then
-    echo "ERROR: kernel not found:"
-    echo "  $IMAGE"
-    exit 1
+phantom_require_cmds qemu-system-x86_64
+
+OUT_DIR="${PHANTOM_OUT:-$LATEST_DIR}"
+BZIMAGE="$OUT_DIR/bzImage"
+INITRAMFS="$OUT_DIR/phantom-initramfs.cpio.gz"
+
+# Fallback: artefakty wprost z katalogu kernel
+if [[ ! -f "$BZIMAGE" ]]; then
+	BZIMAGE="$(phantom_bzimage)"
+fi
+if [[ ! -f "$INITRAMFS" ]]; then
+	INITRAMFS="$KERNEL_DIR/usr/phantom-initramfs.cpio.gz"
 fi
 
-if [ ! -f "$INITRAMFS" ]; then
-    echo "ERROR: initramfs not found:"
-    echo "  $INITRAMFS"
-    exit 1
+[[ -f "$BZIMAGE" ]] || die "brak kernela: $BZIMAGE (uruchom ./build.sh)"
+[[ -f "$INITRAMFS" ]] || die "brak initramfs: $INITRAMFS (uruchom ./build.sh)"
+
+KVM_ARGS=()
+if [[ "${PHANTOM_QEMU_KVM:-}" == "1" ]]; then
+	KVM_ARGS=( -enable-kvm -cpu host )
 fi
 
-echo "=== PHANTOM QEMU ==="
-echo "Kernel:    $IMAGE"
-echo "Initramfs: $INITRAMFS"
-echo "Init:      /init"
+info "Phantom OS — QEMU (-nographic)"
+echo "  Kernel   : $BZIMAGE"
+echo "  Initramfs: $INITRAMFS"
+echo "  Init     : /init"
 echo
 
 exec qemu-system-x86_64 \
-    -m 2G \
-    -smp 2 \
-    -kernel "$IMAGE" \
-    -nic user,model=e1000 \
-    -initrd "$INITRAMFS" \
-    -append "console=ttyS0 earlycon=ttyS0 rdinit=/init" \
-    -nographic
-    
+	"${KVM_ARGS[@]}" \
+	-m 2G \
+	-smp 2 \
+	-kernel "$BZIMAGE" \
+	-nic user,model=e1000 \
+	-initrd "$INITRAMFS" \
+	-append "console=ttyS0 earlycon=ttyS0 rdinit=/init" \
+	-nographic

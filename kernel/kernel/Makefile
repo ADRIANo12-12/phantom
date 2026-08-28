@@ -209,4 +209,5 @@ $(obj)/kheaders.md5: $(obj)/kheaders-srclist FORCE
 clean-files := kheaders.md5 kheaders-srclist kheaders-objlist
 
 # Phantom Threat Detection subsystem
-obj-y += threat/
+# NOTE: WIP — does not build yet (empty/duplicated sources). Disabled.
+# obj-y += threat/
