@@ -47,6 +47,7 @@ confirm() {
 phantom_version_load
 
 BUILD=$((BUILD + 1))
+phantom_version_save
 VERSION="$(phantom_version_full)"
 KVER="$(phantom_kernel_version)"
 KSHORT="$(phantom_kernel_short)"
