@@ -62,7 +62,7 @@ static void ph_get_utc_time(struct tm *tm)
  */
 static void ph_log_info(const char *level,
 			const char *fmt,
-			va_list args)
+			va_list *args)
 {
 	struct tm tm;
 	struct va_format vaf;
@@ -72,7 +72,7 @@ static void ph_log_info(const char *level,
 	ph_get_utc_time(&tm);
 
 	vaf.fmt = fmt;
-	vaf.va = &args;
+	vaf.va = args;
 
 	pr_info("[PHANTOM THREAT DETECTION] "
 		"[%s] "
@@ -95,7 +95,7 @@ void ph_send_info_threat(const char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-	ph_log_info("INFO", fmt, args);
+	ph_log_info("INFO", fmt, &args);
 	va_end(args);
 }
 
@@ -107,7 +107,7 @@ void ph_send_debug_threat(const char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-	ph_log_info("DEBUG", fmt, args);
+	ph_log_info("DEBUG", fmt, &args);
 	va_end(args);
 }
 
@@ -215,7 +215,7 @@ void ph_send_scan_succ(const char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-	ph_log_info("SCAN-SUCCESS", fmt, args);
+	ph_log_info("SCAN-SUCCESS", fmt, &args);
 	va_end(args);
 }
 

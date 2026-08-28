@@ -24,44 +24,6 @@ static bool phantom_detector_source_valid(
 }
 
 /*
- * Convert a detector source into an event source.
- *
- * The detector and event layers intentionally have separate enums:
- * detector source describes the detector subsystem, while event source
- * describes the origin recorded in a threat event.
- */
-static u8 phantom_detector_event_source(
-	enum phantom_detector_source source)
-{
-	switch (source) {
-	case PHANTOM_DETECTOR_SOURCE_SYSCALL:
-		return PHANTOM_SOURCE_SYSCALL;
-
-	case PHANTOM_DETECTOR_SOURCE_PROCESS:
-		return PHANTOM_SOURCE_PROCESS;
-
-	case PHANTOM_DETECTOR_SOURCE_MEMORY:
-		return PHANTOM_SOURCE_MEMORY;
-
-	case PHANTOM_DETECTOR_SOURCE_FILE:
-		return PHANTOM_SOURCE_FILE;
-
-	case PHANTOM_DETECTOR_SOURCE_NETWORK:
-		return PHANTOM_SOURCE_NETWORK;
-
-	case PHANTOM_DETECTOR_SOURCE_MODULE:
-		return PHANTOM_SOURCE_MODULE;
-
-	case PHANTOM_DETECTOR_SOURCE_INTEGRITY:
-		return PHANTOM_SOURCE_INTEGRITY;
-
-	case PHANTOM_DETECTOR_SOURCE_UNKNOWN:
-	default:
-		return PHANTOM_SOURCE_UNKNOWN;
-	}
-}
-
-/*
  * Return the event severity associated with a detection result.
  */
 static u8 phantom_detector_result_severity(

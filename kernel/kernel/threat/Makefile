@@ -1,23 +1,17 @@
+# Phantom Trusted Execution: Threat Detection subsystem
+#
+# Canonical implementation lives at the top level of this directory
+# (main, event, detector, policy, scanner, secure, neutralizer,
+# informator). The scanner is fundamentally an event analysis stage,
+# and the policy engine decides what action to take for each event.
+#
+# The neutralizer is deliberately detect-only until it is enabled.
+
 obj-y += main.o
-
-obj-y += core/event.o
-obj-y += core/queue.o
-
-obj-y += detect/detector.o
-obj-y += detect/process.o
-obj-y += detect/syscall.o
-obj-y += detect/module.o
-obj-y += detect/memory.o
-obj-y += detect/integrity.o
-
-obj-y += scan/scanner.o
-obj-y += scan/process.o
-obj-y += scan/memory.o
-obj-y += scan/module.o
-obj-y += scan/file.o
-obj-y += scan/network.o
-
-obj-y += policy/policy.o
-obj-y += response/neutralizer.o
-obj-y += security/secure.o
-obj-y += reporting/informator.o
+obj-y += event.o
+obj-y += detector.o
+obj-y += policy.o
+obj-y += scanner.o
+obj-y += secure.o
+obj-y += neutralizer.o
+obj-y += informator.o
