@@ -21,14 +21,26 @@ enum phantom_key {
 	KEY_QUIT,
 };
 
+enum view {
+	VIEW_MAIN,
+	VIEW_ACTION,
+};
+
 static struct termios saved_terminal;
 static int terminal_raw_enabled;
+
+static uint32_t g_cols = 80;
+static uint32_t g_rows = 24;
+static uint32_t g_window;
+static uint32_t g_menu_id;
+static uint32_t g_progress_id;
+static uint32_t g_selected;
+static enum view g_view = VIEW_MAIN;
 
 static void terminal_restore(void)
 {
 	if (!terminal_raw_enabled)
 		return;
-
 	tcsetattr(STDIN_FILENO, TCSANOW, &saved_terminal);
 	terminal_raw_enabled = 0;
 	printf("\033[?25h");
@@ -41,7 +53,6 @@ static int terminal_enable_raw(void)
 
 	if (!isatty(STDIN_FILENO))
 		return -ENOTTY;
-
 	if (tcgetattr(STDIN_FILENO, &saved_terminal) < 0)
 		return -errno;
 
@@ -61,6 +72,7 @@ static int terminal_enable_raw(void)
 static void detect_size(uint32_t *cols, uint32_t *rows)
 {
 	struct winsize ws;
+	const char *e;
 
 	*cols = 80;
 	*rows = 24;
@@ -72,6 +84,21 @@ static void detect_size(uint32_t *cols, uint32_t *rows)
 			*rows = ws.ws_row;
 	}
 
+	if (*cols < 40) {
+		e = getenv("COLUMNS");
+		if (e && atoi(e) >= 40)
+			*cols = (uint32_t)atoi(e);
+	}
+	if (*rows < 12) {
+		e = getenv("LINES");
+		if (e && atoi(e) >= 12)
+			*rows = (uint32_t)atoi(e);
+	}
+
+	if (*cols < 40)
+		*cols = 80;
+	if (*rows < 12)
+		*rows = 24;
 	if (*cols > 120)
 		*cols = 120;
 	if (*rows > 40)
@@ -80,12 +107,10 @@ static void detect_size(uint32_t *cols, uint32_t *rows)
 
 static enum phantom_key read_key(void)
 {
-	unsigned char c;
-	unsigned char seq[2];
+	unsigned char c, seq[2];
 
 	if (read(STDIN_FILENO, &c, 1) != 1)
 		return KEY_NONE;
-
 	if (c == '\r' || c == '\n')
 		return KEY_ENTER;
 	if (c == 'q' || c == 'Q')
@@ -94,30 +119,113 @@ static enum phantom_key read_key(void)
 		return KEY_UP;
 	if (c == 'j' || c == 'J' || c == 's' || c == 'S')
 		return KEY_DOWN;
-
 	if (c != 0x1b)
 		return KEY_NONE;
-
 	if (read(STDIN_FILENO, &seq[0], 1) != 1)
 		return KEY_ESCAPE;
 	if (seq[0] != '[')
 		return KEY_ESCAPE;
 	if (read(STDIN_FILENO, &seq[1], 1) != 1)
 		return KEY_ESCAPE;
-
 	if (seq[1] == 'A')
 		return KEY_UP;
 	if (seq[1] == 'B')
 		return KEY_DOWN;
-
 	return KEY_ESCAPE;
 }
 
-static void set_status(uint32_t window, uint32_t rows, const char *text)
+static void ui_status(const char *text)
 {
-	uint32_t y = rows > 4 ? rows - 4 : 1;
+	uint32_t y = g_rows > 3 ? g_rows - 3 : 1;
+	uint32_t w = g_cols > 6 ? g_cols - 6 : 20;
 
-	phantom_osd_status(window, 2, (int32_t)y, 70, text);
+	phantom_osd_status(g_window, 2, (int32_t)y, w, text);
+}
+
+static void ui_progress(uint32_t percent)
+{
+	uint32_t y = g_rows > 5 ? g_rows - 5 : 2;
+	uint32_t w = g_cols > 8 ? g_cols - 8 : 20;
+
+	/* Nowe widgety progress — kernel na razie nie ma update po id;
+	 * kolejne create odświeża pasek na tej samej pozycji. */
+	phantom_osd_progress(g_window, 2, (int32_t)y, w, percent, 0, &g_progress_id);
+}
+
+static void on_progress(uint32_t percent, const char *msg, void *user)
+{
+	(void)user;
+	ui_status(msg ? msg : "");
+	ui_progress(percent);
+	phantom_osd_render();
+}
+
+static void show_action_header(const char *title)
+{
+	uint32_t w = g_cols > 6 ? g_cols - 6 : 20;
+
+	phantom_osd_label(g_window, 2, 1, w, title);
+	phantom_osd_label(g_window, 2, 2, w,
+			  "Working... please wait.  Q aborts to shell after.");
+	ui_progress(0);
+	ui_status("Starting...");
+	phantom_osd_render();
+}
+
+static void run_action(uint32_t selected)
+{
+	g_view = VIEW_ACTION;
+
+	switch (selected) {
+	case 0:
+		show_action_header("Install Phantom OS");
+		phantom_installer_do_install_with_progress(on_progress, NULL);
+		ui_status("Install complete. ENTER = back to menu");
+		break;
+	case 1:
+		show_action_header("System check");
+		phantom_installer_do_system_check_with_progress(on_progress, NULL);
+		ui_status("Check complete. ENTER = back to menu");
+		break;
+	case 2:
+		show_action_header("Network setup");
+		phantom_installer_do_network_setup_with_progress(on_progress, NULL);
+		ui_status("Network done. ENTER = back to menu");
+		break;
+	case 3:
+		show_action_header("Disk setup");
+		phantom_installer_do_disk_setup_with_progress(on_progress, NULL);
+		ui_status("Disk setup done. ENTER = back to menu");
+		break;
+	case 4:
+		terminal_restore();
+		phantom_osd_close();
+		printf("\033[2J\033[H\033[?25h");
+		exit(0);
+	}
+
+	ui_progress(100);
+	phantom_osd_render();
+
+	/* Czekaj na ENTER w raw mode */
+	for (;;) {
+		enum phantom_key k = read_key();
+
+		if (k == KEY_ENTER || k == KEY_ESCAPE)
+			break;
+		if (k == KEY_QUIT) {
+			terminal_restore();
+			phantom_osd_close();
+			printf("\033[2J\033[H\033[?25h");
+			exit(0);
+		}
+	}
+
+	/* Powrót: odśwież główne menu (set selected + status) */
+	g_view = VIEW_MAIN;
+	phantom_osd_menu_set_selected(g_window, g_menu_id, g_selected);
+	ui_progress(0);
+	ui_status("Installer ready.");
 	phantom_osd_render();
 }
 
@@ -125,10 +233,8 @@ int main(void)
 {
 	int window;
 	int ret;
-	uint32_t selected = 0;
 	uint32_t menu_id = 0;
-	uint32_t cols;
-	uint32_t rows;
+	uint32_t label_w, menu_w;
 
 	const char *items[] = {
 		"Install Phantom OS",
@@ -139,65 +245,52 @@ int main(void)
 	};
 	const uint32_t menu_count = sizeof(items) / sizeof(items[0]);
 
-	detect_size(&cols, &rows);
+	detect_size(&g_cols, &g_rows);
 
 	ret = phantom_osd_open();
 	if (ret < 0) {
-		fprintf(stderr, "Phantom Installer: cannot open /dev/phantom_osd: %d\n", ret);
+		fprintf(stderr, "cannot open /dev/phantom_osd: %d\n", ret);
 		return phantom_installer_run();
 	}
 
-	phantom_osd_set_desktop(cols, rows);
+	phantom_osd_set_desktop(g_cols, g_rows);
 
 	window = phantom_osd_create_window(
 		"Phantom OS Installer",
-		0, 0, cols, rows,
+		0, 0, g_cols, g_rows,
 		PHANTOM_OSD_WINDOW_VISIBLE |
 		PHANTOM_OSD_WINDOW_FOCUSED |
 		PHANTOM_OSD_WINDOW_BORDER);
 
 	if (window < 0) {
-		fprintf(stderr, "Phantom Installer: window creation failed: %d\n", window);
 		phantom_osd_close();
 		return phantom_installer_run();
 	}
 
-	phantom_osd_label((uint32_t)window, 2, 1, cols > 6 ? cols - 6 : 20,
-			  "Welcome to Phantom OS.");
-	phantom_osd_label((uint32_t)window, 2, 2, cols > 6 ? cols - 6 : 20,
-			  "UP/DOWN or J/K   ENTER   Q = quit");
+	g_window = (uint32_t)window;
+	label_w = g_cols > 6 ? g_cols - 6 : 20;
+	menu_w = g_cols > 8 ? g_cols - 8 : 30;
 
-	ret = phantom_osd_menu(
-		(uint32_t)window,
-		2, 5,
-		cols > 10 ? cols - 10 : 30,
-		menu_count,
-		items,
-		menu_count,
-		&menu_id);
+	phantom_osd_label(g_window, 2, 1, label_w, "Welcome to Phantom OS.");
+	phantom_osd_label(g_window, 2, 2, label_w,
+			  "UP/DOWN or J/K   ENTER = open   Q = quit");
 
+	ret = phantom_osd_menu(g_window, 2, 5, menu_w, menu_count,
+			       items, menu_count, &menu_id);
 	if (ret < 0) {
-		fprintf(stderr, "Phantom Installer: menu creation failed: %d\n", ret);
 		phantom_osd_close();
 		return phantom_installer_run();
 	}
 
-	phantom_osd_progress(
-		(uint32_t)window,
-		2,
-		(int32_t)(rows > 6 ? rows - 6 : 10),
-		cols > 8 ? cols - 8 : 20,
-		0, 0, NULL);
+	g_menu_id = menu_id;
+	g_selected = 0;
 
-	phantom_osd_status((uint32_t)window, 2,
-			   (int32_t)(rows > 4 ? rows - 4 : 1),
-			   70, "Installer ready.");
+	ui_progress(0);
+	ui_status("Installer ready.");
+	phantom_osd_focus(g_window);
+	phantom_osd_menu_set_selected(g_window, menu_id, 0);
 
-	phantom_osd_focus((uint32_t)window);
-	phantom_osd_menu_set_selected((uint32_t)window, menu_id, selected);
-
-	ret = terminal_enable_raw();
-	if (ret < 0) {
+	if (terminal_enable_raw() < 0) {
 		phantom_osd_close();
 		return phantom_installer_run();
 	}
@@ -207,58 +300,31 @@ int main(void)
 	for (;;) {
 		enum phantom_key key = read_key();
 
+		if (g_view != VIEW_MAIN)
+			continue;
+
 		switch (key) {
 		case KEY_UP:
-			if (selected > 0)
-				selected--;
-			phantom_osd_menu_set_selected((uint32_t)window, menu_id, selected);
+			if (g_selected > 0)
+				g_selected--;
+			phantom_osd_menu_set_selected(g_window, menu_id, g_selected);
 			phantom_osd_render();
 			break;
 
 		case KEY_DOWN:
-			if (selected + 1 < menu_count)
-				selected++;
-			phantom_osd_menu_set_selected((uint32_t)window, menu_id, selected);
+			if (g_selected + 1 < menu_count)
+				g_selected++;
+			phantom_osd_menu_set_selected(g_window, menu_id, g_selected);
 			phantom_osd_render();
 			break;
 
 		case KEY_ENTER:
-			terminal_restore();
-			printf("\n");
-
-			switch (selected) {
-			case 0:
-				set_status((uint32_t)window, rows, "Running: Install...");
-				phantom_installer_do_install();
-				break;
-			case 1:
-				set_status((uint32_t)window, rows, "Running: System check...");
-				phantom_installer_do_system_check();
-				break;
-			case 2:
-				set_status((uint32_t)window, rows, "Running: Network setup...");
-				phantom_installer_do_network_setup();
-				break;
-			case 3:
-				set_status((uint32_t)window, rows, "Running: Disk setup...");
-				phantom_installer_do_disk_setup();
-				break;
-			case 4:
-				phantom_osd_close();
-				printf("\033[2J\033[H\033[?25h");
-				return 0;
-			}
-
-			printf("\nPress ENTER to return to menu...\n");
-			getchar();
-			terminal_enable_raw();
-			phantom_osd_menu_set_selected((uint32_t)window, menu_id, selected);
-			set_status((uint32_t)window, rows, "Installer ready.");
+			run_action(g_selected);
 			break;
 
 		case KEY_ESCAPE:
-			selected = 0;
-			phantom_osd_menu_set_selected((uint32_t)window, menu_id, selected);
+			g_selected = 0;
+			phantom_osd_menu_set_selected(g_window, menu_id, 0);
 			phantom_osd_render();
 			break;
 

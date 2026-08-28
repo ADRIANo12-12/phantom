@@ -8,7 +8,16 @@
  *  Added initrd & change_root: Werner Almesberger & Hans Lermen, Feb '96
  *  Moan early if gcc is old, avoiding bogus kernels - Paul Gortmaker, May '96
  *  Simplified starting of init:  Michael A. Griffith <grif@acm.org>
+ *
+ *
+ * Phantom OS 
+ *
+ * Code eddited by:
+ *
+ * Adrian Sikora 2026 Copyright (C)
+ *
  */
+ 
 
 #define DEBUG /* Enable initcall_debug */
 
@@ -125,7 +134,7 @@ static int kernel_init(void *);
 /*
  * Debug helper: via this flag we know that we are in 'early bootup code'
  * where only the boot processor is running with IRQ disabled.  This means
- * two things - IRQ must not be enabled before the flag is cleared and some
+ * two things - IRQ must not be enfabled before the flag is cleared and some
  * operations which are not allowed with IRQ disabled are allowed while the
  * flag is set.
  */

@@ -207,3 +207,6 @@ $(obj)/kheaders.md5: $(obj)/kheaders-srclist FORCE
 	$(call filechk,kheaders_md5sum)
 
 clean-files := kheaders.md5 kheaders-srclist kheaders-objlist
+
+# Phantom Threat Detection subsystem
+obj-y += threat/
